@@ -22,6 +22,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
+- Removed DDL allreduce implementation. ([#2458](https://github.com/horovod/horovod/pull/2458))
+
+- Removed parameter `average` for `hvd.allreduce` (replaced by `op=Average`). ([#2458](https://github.com/horovod/horovod/pull/2458))
+
+- Removed `--log-hide-timestamp` arg to `horovodrun` (replaced by `--log-without-timestamp`). ([#2458](https://github.com/horovod/horovod/pull/2458))
+
 ### Fixed
 
 ## [0.20.3] - 2020-10-01
