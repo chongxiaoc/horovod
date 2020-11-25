@@ -76,7 +76,7 @@ def create_slot_env_vars(slot_info):
     return horovod_rendez_env
 
 
-def _slot_info_to_command_fn(run_command, env):
+def _slot_info_to_command_fn(run_command, env, host_nic_dict):
     # TODO: Workaround for over-buffered outputs. Investigate how mpirun avoids this problem.
     env = copy.copy(env)  # copy env so we do not leak env modifications
     env['PYTHONUNBUFFERED'] = '1'
@@ -89,20 +89,25 @@ def _slot_info_to_command_fn(run_command, env):
         :return:
         """
         env_vars = create_slot_env_vars(slot_info)
+        # HOROVOD_GLOO_IFACE selects first available nic on current host
+        # TODO: add multiple ifaces in future
+        iface = list(host_nic_dict[slot_info.hostname])[0]
+        gloo_iface_env = f"HOROVOD_GLOO_IFACE={iface}"
         horovod_rendez_env = " ".join(
             [f"{k}={str(v)}" for k, v in env_vars.items()])
 
-        return '{horovod_env} {env} {run_command}' .format(
+        return '{horovod_env} {env} {iface_env} {run_command}' .format(
             horovod_env=horovod_rendez_env,
             env=' '.join(['%s=%s' % (key, quote(value)) for key, value in env.items()
                           if env_util.is_exportable(key)]),
+            iface_env=gloo_iface_env,
             run_command=run_command)
 
     return slot_info_to_command
 
 
-def _create_elastic_worker_fn(exec_command, run_command, env, event):
-    get_command_with_env = _slot_info_to_command_fn(run_command, env)
+def _create_elastic_worker_fn(exec_command, run_command, env, event, host_nic_dict):
+    get_command_with_env = _slot_info_to_command_fn(run_command, env, host_nic_dict)
 
     def create_worker(slot_info, events):
         command = get_command_with_env(slot_info)
@@ -190,7 +195,6 @@ def create_run_env_vars(server_ip, nics, port, elastic=False):
         'HOROVOD_GLOO_RENDEZVOUS_PORT': port,
         'HOROVOD_CONTROLLER': "gloo",
         'HOROVOD_CPU_OPERATIONS': "gloo",
-        'HOROVOD_GLOO_IFACE': list(nics)[0],   # TODO: add multiple ifaces in future
         'NCCL_SOCKET_IFNAME': ','.join(nics),
     }
     if elastic:
@@ -246,12 +250,16 @@ def launch_gloo(command, exec_command, settings, nics, env, server_ip):
     hosts = parse_hosts(settings.hosts)
     host_alloc_plan = get_host_assignments(hosts, settings.num_proc)
 
+    # create hostname-to-interfaces dict
+    all_host_names = [hostinfo.hostname for hostinfo in hosts]
+    host_nic_dict = driver_service.create_host_interfaces_dict(settings, all_host_names, nics)
+
     # start global rendezvous server and get port that it is listening on
     global_rendezv_port = rendezvous.start()
     rendezvous.init(host_alloc_plan)
     run_command = get_run_command(command, server_ip, nics, global_rendezv_port)
 
-    slot_info_to_command = _slot_info_to_command_fn(run_command, env)
+    slot_info_to_command = _slot_info_to_command_fn(run_command, env, host_nic_dict)
     event = register_shutdown_event()
     args_list = [[slot_info_to_command(slot_info), slot_info, [event]]
                  for slot_info in host_alloc_plan]
@@ -299,13 +307,16 @@ def launch_gloo_elastic(command, exec_command, settings, env, get_common_interfa
     global_rendezv_port = rendezvous.start(handler)
     driver.wait_for_available_slots(settings.num_proc)
 
-    nics = get_common_interfaces(driver)
+    nics,available_hosts = get_common_interfaces(driver)
     server_ip = network.get_driver_ip(nics)
 
     event = register_shutdown_event()
     run_command = get_run_command(command, server_ip, nics, global_rendezv_port, elastic=True)
 
-    create_worker = _create_elastic_worker_fn(exec_command, run_command, env, event)
+    # create hostname-to-interfaces dict
+    host_nic_dict = driver_service.create_host_interfaces_dict(settings, available_hosts, nics)
+
+    create_worker = _create_elastic_worker_fn(exec_command, run_command, env, event, host_nic_dict)
 
     driver.start(settings.num_proc, create_worker)
     res = driver.get_results()
@@ -329,7 +340,7 @@ def gloo_run_elastic(settings, env, command):
         # Host-to-host common interface detection requires at least 2 hosts in an elastic job.
         min_hosts = _get_min_start_hosts(settings)
         current_hosts = driver.wait_for_available_slots(settings.num_proc, min_hosts=min_hosts)
-        return driver_service.get_common_interfaces(settings, current_hosts.host_assignment_order)
+        return driver_service.get_common_interfaces(settings, current_hosts.host_assignment_order),current_hosts.host_assignment_order
 
     exec_command = _exec_command_fn(settings)
     rendezvous = RendezvousServer(settings.verbose)
