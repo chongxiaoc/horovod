@@ -2,6 +2,7 @@ if("$ENV{HOROVOD_WITHOUT_TENSORFLOW}" STREQUAL "1")
     return()
 endif()
 
+set(ENV{CMAKE_BUILD_PARALLEL_LEVEL} 8)
 set(TF_TARGET_LIB "tensorflow")
 
 # Find TF

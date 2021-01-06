@@ -2,6 +2,7 @@ if("$ENV{HOROVOD_WITHOUT_PYTORCH}" STREQUAL "1")
     return()
 endif()
 
+set(ENV{CMAKE_BUILD_PARALLEL_LEVEL} 8)
 set(PYTORCH_TARGET_LIB "pytorch")
 
 # Find PyTorch

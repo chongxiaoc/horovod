@@ -71,7 +71,7 @@ class custom_build_ext(build_ext):
                       '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(config.upper(), build_dir),
                       '-DPYTHON_EXECUTABLE:FILEPATH=' + sys.executable]
 
-        make_args = []
+        make_args = ['-j']
         if self.verbose:
             make_args.append('VERBOSE=1')
 

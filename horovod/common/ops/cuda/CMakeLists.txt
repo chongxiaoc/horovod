@@ -1,4 +1,5 @@
 set(CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
+set(ENV{CMAKE_BUILD_PARALLEL_LEVEL} 1)
 
 set(ENV{PYTHONPATH} "${PROJECT_SOURCE_DIR}/cmake:$ENV{PYTHONPATH}")
 execute_process(COMMAND ${PY_EXE} -c "import build_utils; print(' '.join(build_utils.get_nvcc_flags()))"

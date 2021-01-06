@@ -2,6 +2,7 @@ if("$ENV{HOROVOD_WITHOUT_MXNET}" STREQUAL "1")
     return()
 endif()
 
+set(ENV{CMAKE_BUILD_PARALLEL_LEVEL} 8)
 set(Mxnet_TARGET_LIB "mxnet")
 
 # Find MXNet
