@@ -2374,16 +2374,22 @@ class TorchTests(unittest.TestCase):
                 t = t.cuda(hvd.local_rank())
             return t
 
-        tensor_sizes = [17, 32, 81, 12, 15, 23, 22] * 5
-        tensors = [random_sparse_tensor(d0, 10) for d0 in tensor_sizes]
-        allreduced_tensors = [hvd.allreduce(t.to_dense()) for t in tensors]
+        # Running a stress test here 100 iterations and big dimensions.
+        for k in range(100):
+            if hvd.rank() == 0:
+                print("Test: ", k)
+            size_list = [(828767, 20), (83332, 17), (828767, 20), (9405, 14), (941792, 20), (88999, 17), (9216, 14), (1216, 11)]
+            tensors = [random_sparse_tensor(d0, d1) for d0,d1 in size_list]
+            allreduced_tensors = list()
+            handles = list()
+            for j in range(10):
+                allreduced_tensors += [hvd.allreduce(t.clone().to_dense()) for t in tensors]
+                handles += [hvd.sparse_allreduce_async(t.clone(), op=hvd.Average, name=str(i)+str(j)) for i, t in enumerate(tensors)]
 
-        handles = [hvd.sparse_allreduce_async(t, op=hvd.Average, name=str(i))
-                   for i, t in enumerate(tensors)]
-        allgathered_tensors = [handle() for handle in handles]
+            allgathered_tensors = [handle() for handle in handles]
 
-        for reduced, gathered in zip(allreduced_tensors, allgathered_tensors):
-            assert torch.allclose(reduced, gathered.to_dense(), 1e-6)
+            for reduced, gathered in zip(allreduced_tensors, allgathered_tensors):
+                assert torch.allclose(reduced, gathered.to_dense(), 1e-6)
 
 
 
