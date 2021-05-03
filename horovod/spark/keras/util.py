@@ -70,7 +70,9 @@ class TFKerasUtil(object):
 
             if shuffle:
                 dataset = dataset.shuffle(shuffle_buffer_size)
-
+            # Give a very large number here, None and -1 are not working with
+            # petastorm dataset for repeating.
+            dataset = dataset.repeat(1000000000)
             # Decompress sparse data if necessary
             if has_sparse_col:
                 dataset = dataset.batch(1).map(reshape)
