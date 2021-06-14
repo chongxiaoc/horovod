@@ -69,8 +69,8 @@ class TFKerasUtil(object):
                 dataset = dataset.apply(tf.data.experimental.unbatch())
 
             # Apply cache() before shuffle, so we can reshuffle in each iteration.
-            if cache:
-                dataset = dataset.cache()
+            #if cache:
+                #dataset = dataset.cache()
 
             if shuffle:
                 dataset = dataset.shuffle(shuffle_buffer_size)
@@ -88,6 +88,8 @@ class TFKerasUtil(object):
                 dataset = dataset.batch(1).map(reshape)
 
             dataset = dataset.batch(batch_size).map(prep_data_tf_keras)
+            if cache:
+                dataset = dataset.prefetch(1)
             return dataset
         return tf.autograph.experimental.do_not_convert(fn)
 
