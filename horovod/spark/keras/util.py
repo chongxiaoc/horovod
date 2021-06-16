@@ -89,7 +89,7 @@ class TFKerasUtil(object):
 
             dataset = dataset.batch(batch_size).map(prep_data_tf_keras)
             if cache:
-                dataset = dataset.prefetch(1)
+                dataset = dataset.prefetch(tf.data.AUTOTUNE)
             return dataset
         return tf.autograph.experimental.do_not_convert(fn)
 
