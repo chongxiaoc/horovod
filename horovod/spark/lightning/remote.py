@@ -82,6 +82,10 @@ def RemoteTrainer(estimator, metadata, ckpt_bytes, run_id, dataset_idx, train_ro
     store = estimator.getStore()
     remote_store = store.to_remote(run_id, dataset_idx)
 
+    print("store storage options:", store.storage_options)
+    print("train path:", remote_store.train_data_path)
+    print("val path:", remote_store.val_data_path)
+
     set_data_loader = _set_data_loader_fn(transformation, schema_fields, batch_size,
                                           data_loader_cls, loader_num_epochs, store, verbose)
 
@@ -89,6 +93,10 @@ def RemoteTrainer(estimator, metadata, ckpt_bytes, run_id, dataset_idx, train_ro
         import horovod.torch as hvd
         # Horovod: initialize library.
         hvd.init()
+
+        print("store storage options:", store.storage_options)
+        print("train path:", remote_store.train_data_path)
+        print("val path:", remote_store.val_data_path)
 
         with tempfile.TemporaryDirectory() as last_ckpt_dir, remote_store.get_local_output_dir() as run_output_dir:
             last_ckpt_file = os.path.join(last_ckpt_dir, 'last.ckpt')

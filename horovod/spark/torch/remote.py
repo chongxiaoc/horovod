@@ -197,6 +197,9 @@ def RemoteTrainer(estimator, metadata, last_checkpoint_state, run_id, dataset_id
             logs_dir = os.path.join(run_output_dir, remote_store.logs_subdir)
             log_writer = SummaryWriter(logs_dir) if hvd.rank() == 0 else None
             ckpt_file = os.path.join(run_output_dir, remote_store.checkpoint_filename)
+            print("store storage options:", store.storage_options)
+            print("train path:", remote_store.train_data_path)
+            print("val path:", remote_store.val_data_path)
 
             def save_checkpoint():
                 model.cpu()

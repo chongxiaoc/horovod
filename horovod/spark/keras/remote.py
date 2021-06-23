@@ -89,6 +89,10 @@ def RemoteTrainer(estimator, metadata, keras_utils, run_id, dataset_idx):
     is_dbfs = isinstance(store, DBFSLocalStore)
     remote_store = store.to_remote(run_id, dataset_idx)
 
+    print("store storage options:", store.storage_options)
+    print("train path:", remote_store.train_data_path)
+    print("val path:", remote_store.val_data_path)
+
     def SyncCallback(root_path, sync_to_store_fn, keras):
         class _SyncCallback(keras.callbacks.Callback):
             def on_epoch_end(self, epoch, logs=None):
@@ -109,6 +113,10 @@ def RemoteTrainer(estimator, metadata, keras_utils, run_id, dataset_idx):
         hvd = get_horovod()
         hvd.init()
         pin_gpu(hvd, tf, k)
+
+        print("store storage options:", store.storage_options)
+        print("train path:", remote_store.train_data_path)
+        print("val path:", remote_store.val_data_path)
 
         if not user_shuffle_buffer_size:
             shuffle_buffer_size = calculate_shuffle_buffer_size(
