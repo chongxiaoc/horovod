@@ -93,6 +93,8 @@ def RemoteTrainer(estimator, metadata, keras_utils, run_id, dataset_idx):
     print("train path:", remote_store.train_data_path)
     print("val path:", remote_store.val_data_path)
 
+    print("all envs in init:", os.environ)
+
     def SyncCallback(root_path, sync_to_store_fn, keras):
         class _SyncCallback(keras.callbacks.Callback):
             def on_epoch_end(self, epoch, logs=None):
@@ -105,6 +107,7 @@ def RemoteTrainer(estimator, metadata, keras_utils, run_id, dataset_idx):
         yield None
 
     def train(serialized_model, train_rows, val_rows, avg_row_size):
+        print("all envs in train:", os.environ)
         from petastorm import TransformSpec, make_reader, make_batch_reader
         import horovod as _horovod
         k = get_keras()
